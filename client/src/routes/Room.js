@@ -49,7 +49,10 @@ const Room = (props) => {
         peerRef.current = createPeer(userID);
       sendChannel.current= peerRef.current.createDataChannel("sendChannel");
       sendChannel.current.onmessage = handleReceivingData;
-        userStream.current.getTracks().forEach(track => senders.current.push(peerRef.current.addTrack(track, userStream.current)));
+     
+      userStream.current.getTracks().forEach(track => senders.current.push(peerRef.current.addTrack(track, userStream.current)));
+   
+      console.log(peerRef.current);
     }
 
     function createPeer(userID) {
@@ -65,11 +68,12 @@ const Room = (props) => {
                 },
             ]
         });
+    
 
         peer.onicecandidate = handleICECandidateEvent;
         peer.ontrack = handleTrackEvent;
         peer.onnegotiationneeded = () => handleNegotiationNeededEvent(userID);
-       
+        setConnection(true);
         return peer;
     }
 
@@ -88,13 +92,16 @@ const Room = (props) => {
 
     function handleRecieveCall(incoming) {
         peerRef.current = createPeer();
+       setConnection(true);
         peerRef.current.ondatachannel = (e)=>{
             sendChannel.current = e.channel;
             sendChannel.current.onmessage = handleReceivingData;
         }
         const desc = new RTCSessionDescription(incoming.sdp);
         peerRef.current.setRemoteDescription(desc).then(() => {
-            userStream.current.getTracks().forEach(track => peerRef.current.addTrack(track, userStream.current));
+           
+            userStream.current.getTracks().forEach(track => senders.current.push(peerRef.current.addTrack(track, userStream.current)));
+
         }).then(() => {
             return peerRef.current.createAnswer();
         }).then(answer => {
@@ -105,7 +112,7 @@ const Room = (props) => {
                 caller: socketRef.current.id,
                 sdp: peerRef.current.localDescription
             }
-            setConnection(true);
+           
             socketRef.current.emit("answer", payload);
         })
     }
@@ -139,6 +146,7 @@ const Room = (props) => {
     function shareScreen() {
         navigator.mediaDevices.getDisplayMedia({ cursor: true }).then(stream => {
             const screenTrack = stream.getTracks()[0];
+            
             senders.current.find(sender => sender.track.kind === 'video').replaceTrack(screenTrack);
             screenTrack.onended = function() {
                 senders.current.find(sender => sender.track.kind === "video").replaceTrack(userStream.current.getTracks()[1]);
@@ -206,7 +214,7 @@ const Room = (props) => {
 
     }
     let body;
-
+if(connectionEstablished){
         body = (
             <div>
                 <input onChange={selectFile} type="file" />
@@ -214,7 +222,7 @@ const Room = (props) => {
             </div>
         );
   
-
+        }
 
     let downloadPrompt;
     if (gotFile) {
@@ -231,8 +239,8 @@ const Room = (props) => {
   <video controls style={{height: 500, width: 500}} muted autoPlay ref={userVideo} />
             <video controls style={{height: 500, width: 500}} muted autoPlay ref={partnerVideo} />
             <button onClick={shareScreen}>Share screen</button>
-            {body}
-            {downloadPrompt}
+          {body}
+          {downloadPrompt}
 
         </div>
        

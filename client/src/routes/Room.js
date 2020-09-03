@@ -1,6 +1,7 @@
 import React, { useRef, useEffect,useState } from "react";
 import io from "socket.io-client";
 import streamSaver from "streamsaver";
+const worker = new Worker("../worker.js");
 
 const Room = (props) => {
     const [file, setFile] = useState();
@@ -17,7 +18,6 @@ const Room = (props) => {
     const senders = useRef([]);
     const fileNameRef = useRef("");
     const sendChannel = useRef();
-    const worker = new Worker("../worker.js");
 
     useEffect(() => {
         navigator.mediaDevices.getUserMedia({ audio: true, video: true }).then(stream => {
@@ -150,7 +150,7 @@ const Room = (props) => {
        if(typeof(data["data"]) === "string"){
            start = true;
         var filecomplete = JSON.parse(data["data"]);
-        console.log(filecomplete);
+      
        }
        
        
@@ -168,9 +168,13 @@ const Room = (props) => {
         setGotFile(false);
         worker.postMessage("download");
         worker.addEventListener("message", event => {
+ 
+            
             const stream = event.data.stream();
+            
             const fileStream = streamSaver.createWriteStream(fileNameRef.current);
             stream.pipeTo(fileStream);
+
         })
     }
 
